@@ -193,8 +193,8 @@ document.addEventListener('mousemove', e => {
     el.style.top  = `${y}px`;
     el.style.display = (v.z < 1 && v.z > -1) ? 'block' : 'none';
   }
-  document.getElementById('label-earth')?.addEventListener('click', () => (location.href = 'earth.php'));
-  document.getElementById('label-mars') ?.addEventListener('click', () => (location.href = 'mars.php'));
+  document.getElementById('label-earth')?.addEventListener('click', () => (location.href = 'earth.html'));
+  document.getElementById('label-mars') ?.addEventListener('click', () => (location.href = 'mars.html'));
 
   // --- Hover tooltip (follows mouse)
   const tooltip = document.createElement('div');
@@ -236,8 +236,8 @@ document.addEventListener('mousemove', e => {
     raycaster.setFromCamera(pointer, camera);
     const hits = raycaster.intersectObjects([earth, mars], false);
     if (hits.length) {
-      if (hits[0].object === earth) location.href = 'earth.php';
-      else location.href = 'mars.php';
+      if (hits[0].object === earth) location.href = 'earth.html';
+      else location.href = 'mars.html';
     }
   }
   renderer.domElement.addEventListener('pointermove', onPointerMove);
