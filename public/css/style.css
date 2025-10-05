@@ -1,0 +1,79 @@
+/* Developed by Abdulwahab Almusailem */
+:root {
+  --glow: 0 0 24px rgba(0,255,180,.6);
+}
+
+* { box-sizing: border-box; }
+
+body.space-bg {
+  margin:0; height:100vh; overflow:hidden; color:#dff;
+  background: radial-gradient(ellipse at 60% 40%, #0b1020 0%, #050814 60%, #02040a 100%);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+/* Soft CSS Sun */
+.sun {
+  position:absolute; left:-25vw; top:10vh; width:60vw; height:60vw; border-radius:50%;
+  background: radial-gradient(circle at 60% 40%, #ffec9f, #ffbe33 40%, #d26b00 70%, #7b3000 100%);
+  filter: blur(2px);
+  pointer-events:none;
+}
+
+/* Header */
+.brand {
+  position: absolute; top: 20px; right: 24px; z-index: 3; text-align: right;
+  color:#e8f9ff; text-shadow: 0 8px 32px rgba(0,0,0,.45);
+}
+.brand h1 {
+  margin:0; font-weight:800; letter-spacing:.02em;
+  font-size: clamp(22px, 3vw, 36px);
+}
+.brand p {
+  margin:.25rem 0 0; opacity:.85; font-weight:500;
+}
+
+/* 3D container fills viewport */
+#hero3d {
+  position:absolute; inset:0; z-index:1;
+}
+
+/* Planet labels (HTML overlays) */
+.planet-label {
+  position: absolute;
+  transform: translate(-50%,-50%);
+  background: rgba(0,15,25,.6);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(0,255,200,.25);
+  color:#bfe;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  cursor: pointer;
+  z-index: 2;
+  box-shadow: 0 8px 24px rgba(0,0,0,.35);
+  transition: transform .15s ease, box-shadow .15s ease, background .2s ease, border-color .2s ease;
+}
+.planet-label:hover {
+  transform: translate(-50%,-50%) scale(1.05);
+  box-shadow: 0 12px 40px rgba(0,255,200,.25);
+  border-color: rgba(0,255,200,.45);
+}
+.planet-label:active {
+  transform: translate(-50%,-50%) scale(0.98);
+}
+
+/* Fallback CTA for non-WebGL / keyboard navigation */
+.fallback-cta {
+  position: absolute; left: 24px; bottom: 24px; z-index: 3; display:flex; gap:12px;
+}
+.cta {
+  border:1px solid rgba(190,255,255,.25);
+  background: linear-gradient(180deg, rgba(0,35,55,.65), rgba(0,15,25,.55));
+  color:#dff; font-weight:700; letter-spacing:.04em;
+  padding: 10px 14px; border-radius: 12px; cursor:pointer;
+  backdrop-filter: blur(6px);
+  transition: transform .15s ease, border-color .2s ease, box-shadow .2s ease;
+}
+.cta:hover { transform: translateY(-1px); border-color: rgba(140,255,255,.45); box-shadow: 0 8px 28px rgba(0,255,200,.15); }
+.cta:active { transform: translateY(0); }
