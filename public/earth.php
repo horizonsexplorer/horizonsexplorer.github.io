@@ -39,6 +39,7 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-side-by-side@2.0.1/leaflet-side-by-side.min.js"></script>
+    <script src="js/labels-service.js"></script>
   <script src="js/earth.js"></script>
 </body>
 </html>
