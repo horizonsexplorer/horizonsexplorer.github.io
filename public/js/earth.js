@@ -1,4 +1,5 @@
 // public/js/earth.js - Developed by Abdulwahab Almusailem
+// Requires labels-service.js loaded before this file.
 
 // ---------------- Map (EPSG:4326) ----------------
 const map = L.map('map', {
@@ -44,8 +45,8 @@ function gibsUrl(layerId, tms, dateStr) {
 }
 function wmtsLayer(urlTemplate, opts = {}) {
   const layer = L.tileLayer('', Object.assign({
-    tileSize: 410,        
-    detectRetina: false,  
+    tileSize: 410,
+    detectRetina: false,
     noWrap: true,
     crossOrigin: true,
     bounds: [[-90, -180], [90, 180]]
@@ -110,12 +111,12 @@ function applyStateFromURL() {
   const wantCompare = params.get('compare') === '1';
   const alpha = params.get('alpha');
 
-  // 1) Apply UI values from URL first (so subsequent map/setView can't trigger URL resets)
+  // 1) Apply UI values from URL first
   if (left  && LAYERS[left]  && layerSelect)   layerSelect.value   = left;
   if (right && LAYERS[right] && compareSelect) compareSelect.value = right;
   if (d && dateInput) dateInput.value = d;
 
-  // 2) Build layers for requested mode (avoid URL writes during INIT)
+  // 2) Build layers for requested mode
   if (wantCompare) {
     enableCompare(true /*fromURL*/);
     if (alpha && opacityInput) {
@@ -123,11 +124,11 @@ function applyStateFromURL() {
       if (topLayer) topLayer.setOpacity(parseInt(alpha, 10) / 100);
     }
   } else {
-    disableCompare(true); // don't re-add single layer in disable; we'll add below
+    disableCompare(true);
     applyLayer();
   }
 
-  // 3) Finally set the view (after layers exist). This avoids a moveend writing defaults.
+  // 3) Set the view after layers exist
   if (!Number.isNaN(lat) && !Number.isNaN(lon) && !Number.isNaN(z)) {
     map.setView([lat, lon], z);
   }
@@ -138,7 +139,7 @@ const toolbar   = document.querySelector('.toolbar');
 const dateInput = document.getElementById('date');
 const todayStr  = new Date().toISOString().slice(0, 10);
 
-// Respect URL date if present; only set default when no ?date in URL
+// Respect URL date if present
 const _urlDate = new URLSearchParams(location.search).get('date');
 if (dateInput && !_urlDate) dateInput.value = todayStr;
 
@@ -168,7 +169,6 @@ Object.keys(LAYERS).forEach(k => {
   opt.value = k; opt.textContent = k;
   compareSelect.appendChild(opt);
 });
-// Only set a default compare layer if URL didn't specify ?right
 const _urlRight = new URLSearchParams(location.search).get('right');
 if (compareSelect && !_urlRight && !compareSelect.value) {
   compareSelect.value = 'MODIS Terra True Color (Daily)';
@@ -211,7 +211,6 @@ function layerFromKey(key, dateStr) {
   return layer;
 }
 function refreshMapMaxZoom() {
-  // pick the larger maxZoom among active layers to avoid blocking zoom
   const zooms = [];
   if (currentLayer && currentLayer.options.maxZoom) zooms.push(currentLayer.options.maxZoom);
   if (bottomLayer && bottomLayer.options.maxZoom)   zooms.push(bottomLayer.options.maxZoom);
@@ -222,10 +221,7 @@ function refreshMapMaxZoom() {
 
 // --------------- Single-layer mode ---------------
 function applyLayer() {
-  if (compareActive) { // in compare mode, rebuild both layers instead
-    rebuildCompare();
-    return;
-  }
+  if (compareActive) { rebuildCompare(); return; }
   if (currentLayer) { map.removeLayer(currentLayer); currentLayer = null; }
   currentLayer = layerFromKey(layerSelect.value, dateInput?.value || todayStr).addTo(map);
   refreshMapMaxZoom();
@@ -233,7 +229,7 @@ function applyLayer() {
 
 // --------------- Compare mode (opacity slider) ---
 function buildOpacityUI() {
-  if (opacityHolder) return; // already present
+  if (opacityHolder) return;
   opacityHolder = document.createElement('span');
   opacityHolder.style.marginLeft = '8px';
   opacityHolder.innerHTML = `
@@ -258,49 +254,30 @@ function removeOpacityUI() {
 
 function enableCompare(fromURL = false) {
   compareActive = true;
-
-  // Remove single base if present
   if (currentLayer) { map.removeLayer(currentLayer); currentLayer = null; }
-
-  // Build bottom (left) and top (right) layers
   bottomLayer = layerFromKey(layerSelect.value,   dateInput?.value || todayStr).addTo(map);
   topLayer    = layerFromKey(compareSelect.value, dateInput?.value || todayStr).addTo(map);
-
-  // Default opacity 0.6
   topLayer.setOpacity(0.6);
-
-  // UI
   buildOpacityUI();
-
   refreshMapMaxZoom();
   if (!fromURL) setURLFromStateSafe();
 }
 function rebuildCompare() {
   if (!compareActive) return;
-  // Remove existing compare layers
   if (bottomLayer && map.hasLayer(bottomLayer)) map.removeLayer(bottomLayer);
   if (topLayer && map.hasLayer(topLayer))       map.removeLayer(topLayer);
-
-  // Recreate with current selections/date
   bottomLayer = layerFromKey(layerSelect.value,   dateInput?.value || todayStr).addTo(map);
   topLayer    = layerFromKey(compareSelect.value, dateInput?.value || todayStr).addTo(map);
-
-  // Keep opacity if slider exists
   const alpha = opacityInput ? (parseInt(opacityInput.value, 10) / 100) : 0.6;
   topLayer.setOpacity(alpha);
-
   refreshMapMaxZoom();
 }
 function disableCompare(skipApplySingle = false) {
   compareActive = false;
-
-  // Remove compare layers
   if (bottomLayer && map.hasLayer(bottomLayer)) map.removeLayer(bottomLayer);
   if (topLayer && map.hasLayer(topLayer))       map.removeLayer(topLayer);
   bottomLayer = topLayer = null;
-
   removeOpacityUI();
-
   if (!skipApplySingle) applyLayer();
   setURLFromStateSafe();
 }
@@ -309,48 +286,28 @@ function disableCompare(skipApplySingle = false) {
 const markers = L.layerGroup().addTo(map);
 const labelBtn = document.getElementById('add-pin');
 
-async function loadLabels(){
+async function loadLabels() {
   try {
-    const res = await fetch('../api/labels_get.php?world=earth');
-    const items = await res.json();
+    const items = await window.Labels.getAll('earth');
     markers.clearLayers();
     items.forEach(pt => {
       L.marker([pt.lat, pt.lng]).addTo(markers)
         .bindPopup(`<b>${pt.title || 'Label'}</b><br>${pt.desc || ''}`);
     });
-  } catch(e){ console.warn('labels_get failed', e); }
+  } catch (e) { console.warn('labels_get failed', e); }
 }
 loadLabels();
-// ---- Download labels (JSON) ----
+
+// ---- Download labels (merged base + local) ----
 const dlBtn = document.getElementById('dl-labels');
+dlBtn?.addEventListener('click', () => window.Labels.download('earth'));
 
-async function downloadLabels() {
-  try {
-    const res = await fetch('../api/labels_get.php?world=earth', { cache: 'no-store' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const items = await res.json();
-    const filename = `earth-labels-${new Date().toISOString().slice(0,10)}.json`;
-    const blob = new Blob([JSON.stringify(items, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); a.remove();
-    URL.revokeObjectURL(url);
-  } catch (err) {
-    console.warn('labels download failed', err);
-    alert('Could not download labels. Check the console/network tab.');
-  }
-}
-dlBtn?.addEventListener('click', downloadLabels);
-
-labelBtn?.addEventListener('click', ()=>{
-  const once = (e)=>{
+labelBtn?.addEventListener('click', () => {
+  const once = (e) => {
     const title = prompt('Label title?') || 'Label';
     const desc  = prompt('Description (optional)') || '';
-    fetch('../api/labels_put.php', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ world:'earth', lat:e.latlng.lat, lng:e.latlng.lng, title, desc })
-    }).then(loadLabels);
+    window.Labels.add('earth', { lat: e.latlng.lat, lng: e.latlng.lng, title, desc });
+    loadLabels();
     map.off('click', once);
   };
   alert('Click on the map to place a label');
@@ -375,8 +332,7 @@ gotoBtn?.addEventListener('click', ()=>{
   map.flyTo(ll, 5);
 });
 
-// ---------------- Time & Space "Video" controls ----------------
-// UI
+// ---------------- Time controls ------------------
 const timeUI = document.createElement('span');
 timeUI.style.marginLeft = '8px';
 timeUI.innerHTML = `
@@ -399,7 +355,6 @@ timeUI.innerHTML = `
 `;
 toolbar?.appendChild(timeUI);
 
-// Elements
 const playBtn = document.getElementById('vid-play');
 const pauseBtn = document.getElementById('vid-pause');
 const fromEl = document.getElementById('vid-from');
@@ -408,13 +363,11 @@ const stepEl = document.getElementById('vid-step');
 const loopEl = document.getElementById('vid-loop');
 const scrub = document.getElementById('vid-scrub');
 
-// Defaults (use current date as center of range)
 const todayISO = new Date().toISOString().slice(0,10);
 const weekAgoISO = new Date(Date.now() - 6*864e5).toISOString().slice(0,10);
 fromEl.value = weekAgoISO;
 toEl.value = todayISO;
 
-// Build the date frames (ISO strings)
 function makeFrames() {
   const start = new Date(fromEl.value);
   const end   = new Date(toEl.value);
@@ -428,7 +381,6 @@ function makeFrames() {
   return out;
 }
 
-// Keep timeline in sync with UI & URL
 let frames = makeFrames();
 function rebuildFramesAndScrub() {
   frames = makeFrames();
@@ -439,29 +391,19 @@ function rebuildFramesAndScrub() {
 }
 [fromEl, toEl, stepEl].forEach(el => el.addEventListener('change', rebuildFramesAndScrub));
 
-// Jump to frame
 function setFrame(idx) {
   idx = Math.max(0, Math.min(frames.length - 1, idx));
   const iso = frames[idx];
   if (!iso) return;
-
   dateInput.value = iso;
-  if (compareActive) {
-    rebuildCompare();
-  } else {
-    applyLayer();
-  }
+  if (compareActive) { rebuildCompare(); } else { applyLayer(); }
   scrub.value = String(idx);
 }
-
-// Scrubber drag
 scrub.addEventListener('input', () => setFrame(parseInt(scrub.value, 10)));
 
-// ---------- Load-aware Animation loop ----------
 let playing = false;
 function delay(ms){ return new Promise(r => setTimeout(r, ms)); }
 
-// Wait until all visible tiles of the active layer(s) report 'load' (or timeout)
 function waitForTiles(timeoutMs = 7000) {
   const layers = [];
   if (compareActive) {
@@ -476,18 +418,9 @@ function waitForTiles(timeoutMs = 7000) {
     let done = false;
     const finish = () => { if (!done) { done = true; cleanup(); resolve(); } };
     const onLoad = () => finish();
-
-    const tick = setTimeout(() => {
-      if (layer._tilesToLoad === 0) finish();
-    }, 0);
-
+    const tick = setTimeout(() => { if (layer._tilesToLoad === 0) finish(); }, 0);
     const to = setTimeout(finish, timeoutMs);
-    const cleanup = () => {
-      clearTimeout(tick);
-      clearTimeout(to);
-      layer.off('load', onLoad);
-    };
-
+    const cleanup = () => { clearTimeout(tick); clearTimeout(to); layer.off('load', onLoad); };
     layer.on('load', onLoad);
   })));
 }
@@ -496,9 +429,7 @@ async function play() {
   if (playing || frames.length === 0) return;
   playing = true;
   playBtn.disabled = true; pauseBtn.disabled = false;
-
   let idx = Math.max(0, frames.indexOf(dateInput.value));
-
   while (playing) {
     idx++;
     if (idx >= frames.length) {
@@ -518,7 +449,6 @@ function pause() {
 playBtn.addEventListener('click', play);
 pauseBtn.addEventListener('click', pause);
 
-// Recompute frames when compare or layer/date changes outside the player
 dateInput?.addEventListener('change', () => {
   if (!frames.includes(dateInput.value)) rebuildFramesAndScrub();
   scrub.value = String(frames.indexOf(dateInput.value));
@@ -526,7 +456,6 @@ dateInput?.addEventListener('change', () => {
 
 // ---------- Simple prefetch (one frame ahead) ----------
 map.on('moveend', () => {
-  // Preload next frame tiles for a smoother feel 
   const idx = frames.indexOf(dateInput.value);
   const next = frames[idx + 1];
   if (!next) return;
@@ -544,30 +473,24 @@ map.on('moveend', () => {
   });
 });
 
-// Keep scrub aligned initially
 rebuildFramesAndScrub();
 
 // --------------- URL wiring & init ---------------
 map.on('moveend', setURLFromStateSafe);
 
 function onAnyChange() {
-  if (compareActive) {
-    rebuildCompare();
-  } else {
-    applyLayer();
-  }
+  if (compareActive) { rebuildCompare(); } else { applyLayer(); }
   setURLFromStateSafe();
 }
 dateInput?.addEventListener('change', onAnyChange);
 layerSelect?.addEventListener('change', onAnyChange);
 compareSelect?.addEventListener('change', onAnyChange);
-compareBtn?.addEventListener('click', () => {
+const compareBtnEl = document.getElementById('compare-toggle');
+compareBtnEl?.addEventListener('click', () => {
   if (!compareActive) enableCompare(); else disableCompare();
   setURLFromStateSafe();
 });
 
-// Apply URL (no writes during INIT), then allow URL updates
 applyStateFromURL();
 INIT = false;
-// Normalize URL once after init (now that state matches controls)
 setURLFromState();
