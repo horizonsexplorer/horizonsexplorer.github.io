@@ -1,4 +1,5 @@
 // public/js/mars.js - Developed by Abdulwahab Almusailem
+// Requires labels-service.js loaded before this file.
 
 // -------------------- Map init (EQ 0–360) --------------------
 const map = L.map('map', { center: [0, 180], zoom: 2, worldCopyJump: true });
@@ -133,7 +134,6 @@ function applyStateFromURL() {
   if (base && baseSelect && (base === 'CTX' || base === 'MOLA')) baseSelect.value = base;
   else if (baseSelect && !baseSelect.value) baseSelect.value = 'CTX';
 
-  // Build layers according to requested mode
   if (wantCompare) {
     enableCompare(/*fromURL*/true);
     if (alpha && opacityInput) {
@@ -145,9 +145,7 @@ function applyStateFromURL() {
     applyBase(baseSelect ? baseSelect.value : 'CTX');
   }
 
-  // Set view AFTER layers exist (so maxZoom clamp is already in place)
   if (!Number.isNaN(lat) && !Number.isNaN(lon) && !Number.isNaN(z)) {
-    // If compare is active, clamp incoming z to 7
     const targetZ = wantCompare ? Math.min(z, 7) : z;
     map.setView([lat, lon], targetZ);
   }
@@ -155,12 +153,9 @@ function applyStateFromURL() {
 
 // -------------------- Single-base mode --------------------
 function applyBase(name) {
-  // In compare mode, rebuild both layers instead
   if (compareActive) { rebuildCompare(); return; }
-
   if (currentLayer) { map.removeLayer(currentLayer); currentLayer = null; }
   currentLayer = (name === 'CTX' ? createCTXLayer() : createMOLALayer()).addTo(map);
-
   refreshMapMaxZoom();
   setURLFromState();
 }
@@ -192,28 +187,22 @@ function removeOpacityUI() {
 function enableCompare(fromURL = false) {
   compareActive = true;
 
-  // Remove single layer if present
   if (currentLayer) { map.removeLayer(currentLayer); currentLayer = null; }
 
-  // bottom = selected base; top = the other layer
   const base = baseSelect ? baseSelect.value : 'CTX';
   const top  = otherBase(base);
 
   bottomLayer = (base === 'CTX' ? createCTXLayer()  : createMOLALayer()).addTo(map);
   topLayer    = (top  === 'CTX' ? createCTXLayer()  : createMOLALayer()).addTo(map);
 
-  // default opacity 0.6
   topLayer.setOpacity(0.6);
 
-  // Hard cap zoom to 7 in compare mode
   refreshMapMaxZoom();
   const z = map.getZoom();
   if (z > 7) {
     map.setZoom(7, { animate: false });
-    // hard refresh params with 7 max zoom
     setURLFromState();
   } else if (!fromURL) {
-    // still reflect the mode change
     setURLFromState();
   }
 
@@ -223,7 +212,6 @@ function enableCompare(fromURL = false) {
 function rebuildCompare() {
   if (!compareActive) return;
 
-  // Remove existing
   if (bottomLayer && map.hasLayer(bottomLayer)) map.removeLayer(bottomLayer);
   if (topLayer && map.hasLayer(topLayer))       map.removeLayer(topLayer);
 
@@ -233,11 +221,9 @@ function rebuildCompare() {
   bottomLayer = (base === 'CTX' ? createCTXLayer() : createMOLALayer()).addTo(map);
   topLayer    = (top  === 'CTX' ? createCTXLayer() : createMOLALayer()).addTo(map);
 
-  // keep current slider
   const alpha = opacityInput ? (parseInt(opacityInput.value, 10) / 100) : 0.6;
   topLayer.setOpacity(alpha);
 
-  // Ensure the cap stays at 7 while comparing
   refreshMapMaxZoom();
   if (map.getZoom() > 7) map.setZoom(7, { animate: false });
 
@@ -253,13 +239,11 @@ function disableCompare(skipApplySingle = false) {
 
   removeOpacityUI();
 
-  // Restore single-mode cap immediately (CTX:12, MOLA:7)
   refreshMapMaxZoom(); 
 
   if (!skipApplySingle) {
     applyBase(baseSelect ? baseSelect.value : 'CTX');
   } else {
-    // Keep URL z as-is per requirement; just reflect compare=0 and base, etc.
     setURLFromState();
   }
 }
@@ -269,8 +253,7 @@ const markers = L.layerGroup().addTo(map);
 
 async function loadLabels() {
   try {
-    const res = await fetch('../api/labels_get.php?world=mars');
-    const items = await res.json();
+    const items = await window.Labels.getAll('mars');
     markers.clearLayers();
     items.forEach((pt) => {
       L.marker([pt.lat, pt.lng]).addTo(markers)
@@ -304,10 +287,8 @@ labelBtn?.addEventListener('click', () => {
   const once = (e) => {
     const title = prompt('Label title?') || 'Label';
     const desc  = prompt('Description (optional)') || '';
-    fetch('../api/labels_put.php', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ world: 'mars', lat: e.latlng.lat, lng: e.latlng.lng, title, desc }),
-    }).then(loadLabels);
+    window.Labels.add('mars', { lat: e.latlng.lat, lng: e.latlng.lng, title, desc });
+    loadLabels();
     map.off('click', once);
   };
   alert('Click on the map to place a label');
@@ -320,18 +301,7 @@ gotoBtn?.addEventListener('click', () => {
   map.flyTo(ll, 6);
 });
 
-dlBtn?.addEventListener('click', async () => {
-  try {
-    const res = await fetch('../api/labels_get.php?world=mars');
-    const json = await res.json();
-    const blob = new Blob([JSON.stringify(json, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `mars-labels-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  } catch (e) { console.warn('download labels failed', e); }
-});
+dlBtn?.addEventListener('click', () => window.Labels.download('mars'));
 
 compareBtn?.addEventListener('click', () => {
   if (!compareActive) enableCompare(); else disableCompare();
