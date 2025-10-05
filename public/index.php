@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+      <!-- Developed by Abdulwahab Almusailem -->
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Horzions Explorer</title>
+    <style>
+    .brand h1 {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin: 0;
+    }
+    .brand .brand-subtitle {
+      margin: 6px 0 0 0;
+    }
+    .brand-logo {
+      width: 75px;
+      height: 39px; 
+      object-fit: contain;
+      display: inline-block;
+    }
+  </style>
+
+  <link rel="stylesheet" href="css/style.css"/>
+  <!-- Three.js (non-module build for broad compatibility) -->
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body class="space-bg">
+  <!-- Soft CSS Sun (left) -->
+  <div class="sun"></div>
+
+  <!-- Title / Branding -->
+  <header class="brand">
+    <h1> <img
+        src="assets/utility/logo.png"
+        alt="Horizons Explorer logo"
+        class="brand-logo"
+        width="75"
+        height="39"
+      />
+        Horzions Explorer</h1>
+    <p>Exploring Beyond Boundaries</p>
+    <p>Zoom into Earth & Mars - explore, compare, discover.</p>
+  </header>
+
+  <!-- 3D Canvas Host -->
+  <div id="hero3d">
+    <!-- Floating labels (HTML overlays) -->
+    <button id="label-earth" class="planet-label" aria-label="Explore Earth">Earth</button>
+    <button id="label-mars" class="planet-label" aria-label="Explore Mars">Mars</button>
+  </div>
+
+  <!-- Fallback CTA buttons (for keyboard or if WebGL isn’t available) -->
+  <nav class="fallback-cta">
+    <button class="cta" onclick="location.href='earth.php'">Open Earth</button>
+    <button class="cta" onclick="location.href='mars.php'">Open Mars</button>
+  </nav>
+
+  <script src="js/solar.js"></script>
+</body>
+</html>
